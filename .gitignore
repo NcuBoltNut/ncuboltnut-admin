@@ -1,0 +1,22 @@
+# build output
+dist/
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+
+# environment variables
+.env
+.env.*.local
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+
+# OS
+.DS_Store
