@@ -22,7 +22,6 @@ const saving = ref(false);
 const deleting = ref(false);
 const loading = ref(!isNew);
 const errorMsg = ref('');
-const currentSha = ref<string | null>(null);
 
 const pageTitle = computed(() => (isNew ? '新增動態' : `編輯：${title.value || fileName.value}`));
 
@@ -51,16 +50,12 @@ onMounted(async () => {
 
   try {
     const path = `${dir}/${fileName.value}`;
-    const [raw, sha] = await Promise.all([
-      fetchRaw(path),
-      auth.token ? getFileSha(auth.token, path) : Promise.resolve(null),
-    ]);
+    const raw = await fetchRaw(path);
     const { data } = parseFrontmatter(raw);
     title.value = String(data.title ?? '');
     date.value = String(data.date ?? '').slice(0, 10);
     summary.value = String(data.summary ?? '');
     order.value = Number(data.order ?? 1);
-    currentSha.value = sha;
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -81,7 +76,12 @@ async function save() {
       summary: summary.value,
       order: order.value,
     });
-    const sha = isNew ? await getFileSha(auth.token, path) : currentSha.value;
+    // Always re-check the SHA right before writing rather than trusting
+    // whatever was fetched when the page loaded — that value goes stale if
+    // the form sits open a while, or if a save is retried after a prior
+    // attempt already changed the file, and a stale SHA makes GitHub
+    // reject the write with a 409.
+    const sha = await getFileSha(auth.token, path);
     await putFile(
       auth.token,
       path,
@@ -98,17 +98,15 @@ async function save() {
 }
 
 async function remove() {
-  if (!auth.token || !currentSha.value) return;
+  if (!auth.token) return;
   if (!confirm(`確定要刪除「${title.value}」嗎？這會直接 commit 到 main。`)) return;
   deleting.value = true;
   errorMsg.value = '';
   try {
-    await deleteFile(
-      auth.token,
-      `${dir}/${fileName.value}`,
-      `content: remove news "${title.value}"`,
-      currentSha.value
-    );
+    const path = `${dir}/${fileName.value}`;
+    const sha = await getFileSha(auth.token, path);
+    if (!sha) throw new Error('找不到這個檔案的 SHA，可能已經被刪除了');
+    await deleteFile(auth.token, path, `content: remove news "${title.value}"`, sha);
     router.push('/news');
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : String(e);
