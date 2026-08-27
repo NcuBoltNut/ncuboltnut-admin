@@ -43,6 +43,20 @@ export function parseFrontmatter(raw: string): ParsedMarkdown {
   return { data, body: body.trim() };
 }
 
+/** Serializes a flat key/value object back into `---\nkey: value\n---\n` frontmatter. */
+export function stringifyFrontmatter(data: Record<string, unknown>): string {
+  const lines = Object.entries(data).map(([key, value]) => `${key}: ${stringifyScalar(value)}`);
+  return `---\n${lines.join('\n')}\n---\n`;
+}
+
+function stringifyScalar(value: unknown): string {
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  const str = String(value ?? '');
+  const escaped = str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return `"${escaped}"`;
+}
+
 function parseScalar(value: string): unknown {
   const trimmed = value.trim();
   if (/^".*"$/.test(trimmed)) return trimmed.slice(1, -1);

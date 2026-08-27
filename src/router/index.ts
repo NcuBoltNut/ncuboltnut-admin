@@ -5,6 +5,12 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'dashboard', component: () => import('../views/DashboardView.vue') },
     { path: '/news', name: 'news', component: () => import('../views/NewsView.vue') },
+    { path: '/news/new', name: 'news-new', component: () => import('../views/NewsEditView.vue') },
+    {
+      path: '/news/:file',
+      name: 'news-edit',
+      component: () => import('../views/NewsEditView.vue'),
+    },
     {
       path: '/activities',
       name: 'activities',

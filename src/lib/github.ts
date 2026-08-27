@@ -70,3 +70,84 @@ export async function fetchRaw(filePath: string): Promise<string> {
 export function repoFileUrl(filePath: string): string {
   return `https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/${filePath}`;
 }
+
+// ---------------------------------------------------------------------
+// Phase C: authenticated writes. Every call below requires a GitHub OAuth
+// token (scope: repo) obtained via src/lib/auth.ts — never call these
+// anonymously, and never let the token leak into a URL or log line.
+// ---------------------------------------------------------------------
+
+function authHeaders(token: string) {
+  return {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+  };
+}
+
+async function authedApi<T>(token: string, path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/${path}`, {
+    ...init,
+    headers: { ...authHeaders(token), ...(init?.headers ?? {}) },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const message = (body as { message?: string }).message ?? `${res.status}`;
+    throw new Error(`GitHub API ${res.status}：${message}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+/** Current SHA of a file, or null if it doesn't exist yet (for new files). */
+export async function getFileSha(token: string, filePath: string): Promise<string | null> {
+  try {
+    const data = await authedApi<{ sha: string }>(
+      token,
+      `contents/${filePath}?ref=${BRANCH}`
+    );
+    return data.sha;
+  } catch {
+    return null;
+  }
+}
+
+function utf8ToBase64(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  bytes.forEach((b) => (binary += String.fromCharCode(b)));
+  return btoa(binary);
+}
+
+/**
+ * Create or update a single file as one commit. Pass `sha` (from
+ * getFileSha) when overwriting an existing file — omit it only when the
+ * file is new, otherwise GitHub rejects the write as a conflict.
+ */
+export async function putFile(
+  token: string,
+  filePath: string,
+  content: string,
+  message: string,
+  sha?: string | null
+): Promise<void> {
+  await authedApi(token, `contents/${filePath}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      message,
+      content: utf8ToBase64(content),
+      branch: BRANCH,
+      ...(sha ? { sha } : {}),
+    }),
+  });
+}
+
+export async function deleteFile(
+  token: string,
+  filePath: string,
+  message: string,
+  sha: string
+): Promise<void> {
+  await authedApi(token, `contents/${filePath}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ message, sha, branch: BRANCH }),
+  });
+}

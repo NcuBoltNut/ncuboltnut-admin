@@ -2,6 +2,9 @@
 import { ref, onMounted } from 'vue';
 import { listDir, fetchRaw, repoFileUrl } from '../lib/github';
 import { parseFrontmatter } from '../lib/frontmatter';
+import { useAuthStore } from '../stores/auth';
+
+const auth = useAuthStore();
 
 interface NewsItem {
   title: string;
@@ -43,8 +46,15 @@ onMounted(async () => {
 </script>
 
 <template>
-  <h1 class="page-title">最新動態</h1>
-  <p class="page-subtitle">共 {{ items.length }} 則，依發布順序排列（唯讀）</p>
+  <div class="header-row">
+    <div>
+      <h1 class="page-title">最新動態</h1>
+      <p class="page-subtitle">
+        共 {{ items.length }} 則，依發布順序排列{{ auth.token ? '' : '（唯讀，登入後可編輯）' }}
+      </p>
+    </div>
+    <RouterLink v-if="auth.token" to="/news/new" class="new-btn">+ 新增動態</RouterLink>
+  </div>
 
   <p v-if="loading" class="loading">讀取中…</p>
   <p v-else-if="loadError" class="error">讀取失敗：{{ loadError }}</p>
@@ -57,8 +67,39 @@ onMounted(async () => {
     </div>
     <p class="card-title">{{ item.title }}</p>
     <p v-html="item.summary"></p>
-    <a class="source-link" :href="repoFileUrl(item.path)" target="_blank" rel="noopener"
-      >在 GitHub 上檢視原始檔 →</a
-    >
+    <div class="card-links">
+      <a class="source-link" :href="repoFileUrl(item.path)" target="_blank" rel="noopener"
+        >在 GitHub 上檢視原始檔 →</a
+      >
+      <RouterLink v-if="auth.token" :to="`/news/${item.path.split('/').pop()}`" class="edit-link"
+        >編輯 →</RouterLink
+      >
+    </div>
   </div>
 </template>
+
+<style scoped>
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.new-btn {
+  background: var(--orange);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 4px;
+}
+.card-links {
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+}
+.edit-link {
+  font-size: 12px;
+  font-weight: 700;
+}
+</style>

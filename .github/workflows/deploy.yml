@@ -28,6 +28,8 @@ jobs:
       - run: npm ci
       - run: npm run type-check
       - run: npm run build
+        env:
+          VITE_GITHUB_CLIENT_ID: ${{ vars.GITHUB_OAUTH_CLIENT_ID }}
 
       - uses: actions/configure-pages@v5
         with:

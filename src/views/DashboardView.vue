@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { listDir, fetchRaw } from '../lib/github';
+import { parseObjectArray } from '../lib/tsDataParser';
 
 const newsCount = ref<number | null>(null);
 const activitiesCount = ref<number | null>(null);
@@ -8,10 +9,6 @@ const membersCount = ref<number | null>(null);
 const sponsorsCount = ref<number | null>(null);
 const historyCount = ref<number | null>(null);
 const loadError = ref('');
-
-function countRecords(raw: string): number {
-  return (raw.match(/\{\s*id:/g) ?? []).length;
-}
 
 onMounted(async () => {
   try {
@@ -24,9 +21,13 @@ onMounted(async () => {
     ]);
     newsCount.value = news.filter((e) => e.name.endsWith('.md')).length;
     activitiesCount.value = activities.filter((e) => e.name.endsWith('.md')).length;
-    membersCount.value = countRecords(membersRaw);
-    sponsorsCount.value = countRecords(sponsorsRaw);
-    historyCount.value = (historyRaw.match(/\{ date:/g) ?? []).length;
+    // parseObjectArray only counts object literals with quoted/number/boolean
+    // values, so it correctly skips the `interface X { id: string; ... }`
+    // type declarations at the top of each file (a plain regex on `{ id:`
+    // would double-count those).
+    membersCount.value = parseObjectArray(membersRaw).length;
+    sponsorsCount.value = parseObjectArray(sponsorsRaw).length;
+    historyCount.value = parseObjectArray(historyRaw).length;
   } catch (e) {
     loadError.value = e instanceof Error ? e.message : String(e);
   }
