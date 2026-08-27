@@ -16,9 +16,29 @@ const router = createRouter({
       name: 'activities',
       component: () => import('../views/ActivitiesView.vue'),
     },
+    {
+      path: '/activities/new',
+      name: 'activities-new',
+      component: () => import('../views/ActivitiesEditView.vue'),
+    },
+    {
+      path: '/activities/:file',
+      name: 'activities-edit',
+      component: () => import('../views/ActivitiesEditView.vue'),
+    },
     { path: '/members', name: 'members', component: () => import('../views/MembersView.vue') },
     { path: '/sponsors', name: 'sponsors', component: () => import('../views/SponsorsView.vue') },
     { path: '/history', name: 'history', component: () => import('../views/HistoryView.vue') },
+    {
+      path: '/:type(members|generations|advisors|sponsors|history)/new',
+      name: 'data-new',
+      component: () => import('../views/DataRecordEditView.vue'),
+    },
+    {
+      path: '/:type(members|generations|advisors|sponsors|history)/edit/:index',
+      name: 'data-edit',
+      component: () => import('../views/DataRecordEditView.vue'),
+    },
   ],
 });
 
