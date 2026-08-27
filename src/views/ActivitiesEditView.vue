@@ -53,7 +53,7 @@ function parseStats(text: string): { num: string; label: string }[] {
 onMounted(async () => {
   if (isNew) {
     try {
-      const entries = await listDir(dir);
+      const entries = await listDir(dir, auth.token ?? undefined);
       order.value = entries.filter((e) => e.name.endsWith('.md')).length + 1;
     } catch {
       order.value = 1;
@@ -63,7 +63,7 @@ onMounted(async () => {
 
   try {
     const path = `${dir}/${fileName.value}`;
-    const raw = await fetchRaw(path);
+    const raw = await fetchRaw(path, auth.token ?? undefined);
     const { data } = parseFrontmatter(raw);
     title.value = String(data.title ?? '');
     dateLabel.value = String(data.dateLabel ?? '');

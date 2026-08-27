@@ -24,11 +24,12 @@ const RAW_BASE = 'https://raw.githubusercontent.com/NcuBoltNut/ncuboltnut.github
 
 onMounted(async () => {
   try {
-    const entries = await listDir('src/content/activities');
+    const t = auth.token ?? undefined;
+    const entries = await listDir('src/content/activities', t);
     const files = entries.filter((e) => e.name.endsWith('.md'));
     const parsed = await Promise.all(
       files.map(async (entry) => {
-        const raw = await fetchRaw(entry.path);
+        const raw = await fetchRaw(entry.path, t);
         const { data } = parseFrontmatter(raw);
         const stats = Array.isArray(data.stats)
           ? (data.stats as unknown[]).map((s) => String(s))

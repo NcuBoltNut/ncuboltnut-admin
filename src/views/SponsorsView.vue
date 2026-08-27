@@ -13,7 +13,7 @@ const RAW_BASE = 'https://raw.githubusercontent.com/NcuBoltNut/ncuboltnut.github
 
 onMounted(async () => {
   try {
-    const raw = await fetchRaw('src/data/sponsors.ts');
+    const raw = await fetchRaw('src/data/sponsors.ts', auth.token ?? undefined);
     sponsors.value = parseObjectArray(raw)
       .map((r, i): DataRecord & { __index: number } => ({ ...r, __index: i }))
       .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));

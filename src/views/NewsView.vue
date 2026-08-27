@@ -21,11 +21,12 @@ const loadError = ref('');
 onMounted(async () => {
   try {
     const dir = 'src/content/news';
-    const entries = await listDir(dir);
+    const t = auth.token ?? undefined;
+    const entries = await listDir(dir, t);
     const files = entries.filter((e) => e.name.endsWith('.md'));
     const parsed = await Promise.all(
       files.map(async (entry) => {
-        const raw = await fetchRaw(entry.path);
+        const raw = await fetchRaw(entry.path, t);
         const { data } = parseFrontmatter(raw);
         return {
           title: String(data.title ?? entry.name),

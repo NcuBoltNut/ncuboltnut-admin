@@ -37,7 +37,7 @@ onMounted(async () => {
         form.value[f.key] = f.type === 'number' ? 0 : f.type === 'boolean' ? false : '';
       }
     } else {
-      const raw = await fetchRaw(schema.path);
+      const raw = await fetchRaw(schema.path, auth.token ?? undefined);
       const { records } = loadDataFile(raw);
       const record = records[indexParam!];
       if (!record) throw new Error('找不到這筆資料');
@@ -55,7 +55,7 @@ async function save() {
   saving.value = true;
   errorMsg.value = '';
   try {
-    const raw = await fetchRaw(schema.path);
+    const raw = await fetchRaw(schema.path, auth.token ?? undefined);
     const { header, records } = loadDataFile(raw);
     const next = [...records];
     if (isNew) {
@@ -88,7 +88,7 @@ async function remove() {
   deleting.value = true;
   errorMsg.value = '';
   try {
-    const raw = await fetchRaw(schema.path);
+    const raw = await fetchRaw(schema.path, auth.token ?? undefined);
     const { header, records } = loadDataFile(raw);
     const next = records.filter((_, i) => i !== indexParam);
     const content = serializeDataFile(header, next, schema.fields);

@@ -37,10 +37,11 @@ async function load() {
   loading.value = true;
   loadError.value = '';
   try {
+    const t = auth.token ?? undefined;
     const [membersRaw, generationsRaw, advisorsRaw] = await Promise.all([
-      fetchRaw('src/data/members.ts'),
-      fetchRaw('src/data/generations.ts'),
-      fetchRaw('src/data/advisors.ts'),
+      fetchRaw('src/data/members.ts', t),
+      fetchRaw('src/data/generations.ts', t),
+      fetchRaw('src/data/advisors.ts', t),
     ]);
     members.value = withIndex(parseObjectArray(membersRaw));
     generations.value = withIndex(parseObjectArray(generationsRaw));

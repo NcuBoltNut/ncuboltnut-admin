@@ -1,7 +1,16 @@
-// Phase B (read-only): fetches content straight from the public
-// ncuboltnut.github.io repo. No auth needed — it's a public repo and we're
-// only reading. Writing back (Phase C) will need GitHub OAuth + a token
-// exchange backend; this file stays read-only until that lands.
+// Reads content from the public ncuboltnut.github.io repo, two ways:
+//
+// - Anonymous (no token): via api.github.com (listings) and
+//   raw.githubusercontent.com (file bodies). Works for everyone, but
+//   raw.githubusercontent.com sits behind a CDN that can serve a stale
+//   cached copy for a few minutes right after a commit — fine for casual
+//   browsing, wrong for "did my save just take?".
+// - Authenticated (token from a logged-in session): every read goes
+//   through api.github.com's Contents API instead, which reflects commits
+//   immediately (no CDN in front of it) and carries the 5000/hour
+//   authenticated rate limit instead of the 60/hour anonymous one. Once a
+//   token exists there's no reason to prefer the anonymous path, so writes
+//   (Phase C) always read this way before/after mutating a file.
 
 const OWNER = 'NcuBoltNut';
 const REPO = 'ncuboltnut.github.io';
@@ -13,27 +22,45 @@ export interface RepoEntry {
   type: 'file' | 'dir';
 }
 
-// Anonymous GitHub API calls are capped at 60/hour per IP — easy to burn
-// through when several people share a network. Directory listings barely
-// change, so cache them client-side for a few minutes to keep real-world
-// usage well under that limit. A real fix (routing reads through an
-// authenticated backend) arrives naturally with Phase C's write support.
 const LIST_CACHE_TTL_MS = 5 * 60 * 1000;
 
-async function api<T>(path: string): Promise<T> {
+function authHeaders(token?: string): Record<string, string> {
+  const headers: Record<string, string> = { Accept: 'application/vnd.github+json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+async function api<T>(path: string, token?: string, init?: Omit<RequestInit, 'headers'>): Promise<T> {
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/${path}`, {
-    headers: { Accept: 'application/vnd.github+json' },
+    ...init,
+    headers: authHeaders(token),
   });
   if (!res.ok) {
-    if (res.status === 403 || res.status === 429) {
+    if (!token && (res.status === 403 || res.status === 429)) {
       throw new Error('已達 GitHub 匿名 API 每小時查詢上限，請稍後再試（通常一小時內恢復）');
     }
-    throw new Error(`GitHub API ${res.status} for ${path}`);
+    const body = await res.json().catch(() => ({}));
+    const message = (body as { message?: string }).message ?? `${res.status}`;
+    throw new Error(`GitHub API ${res.status}：${message}`);
   }
   return res.json() as Promise<T>;
 }
 
-export async function listDir(dirPath: string): Promise<RepoEntry[]> {
+/** Base64 (as GitHub's Contents API returns it) → a proper UTF-8 string. */
+function base64ToUtf8(b64: string): string {
+  const binary = atob(b64.replace(/\n/g, ''));
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+export async function listDir(dirPath: string, token?: string): Promise<RepoEntry[]> {
+  // Logged in: always fetch fresh. The whole point of the cache is to stay
+  // under the *anonymous* rate limit; an authenticated caller has 5000/hour
+  // and, more importantly, needs to see files they just added/removed.
+  if (token) {
+    return api<RepoEntry[]>(`contents/${dirPath}?ref=${BRANCH}`, token);
+  }
+
   const cacheKey = `bn-admin:listDir:${dirPath}`;
   try {
     const cached = sessionStorage.getItem(cacheKey);
@@ -57,7 +84,20 @@ export async function listDir(dirPath: string): Promise<RepoEntry[]> {
   return entries;
 }
 
-export async function fetchRaw(filePath: string): Promise<string> {
+/**
+ * Reads a file's content. Pass the logged-in user's token when you have one
+ * — besides the higher rate limit, it's the only way to reliably see a
+ * change made moments ago (see the module doc comment above).
+ */
+export async function fetchRaw(filePath: string, token?: string): Promise<string> {
+  if (token) {
+    const data = await api<{ content: string; encoding: string }>(
+      `contents/${filePath}?ref=${BRANCH}`,
+      token
+    );
+    return data.encoding === 'base64' ? base64ToUtf8(data.content) : data.content;
+  }
+
   const res = await fetch(
     `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${filePath}`
   );
@@ -77,33 +117,10 @@ export function repoFileUrl(filePath: string): string {
 // anonymously, and never let the token leak into a URL or log line.
 // ---------------------------------------------------------------------
 
-function authHeaders(token: string) {
-  return {
-    Authorization: `Bearer ${token}`,
-    Accept: 'application/vnd.github+json',
-  };
-}
-
-async function authedApi<T>(token: string, path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/${path}`, {
-    ...init,
-    headers: { ...authHeaders(token), ...(init?.headers ?? {}) },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const message = (body as { message?: string }).message ?? `${res.status}`;
-    throw new Error(`GitHub API ${res.status}：${message}`);
-  }
-  return res.json() as Promise<T>;
-}
-
 /** Current SHA of a file, or null if it doesn't exist yet (for new files). */
 export async function getFileSha(token: string, filePath: string): Promise<string | null> {
   try {
-    const data = await authedApi<{ sha: string }>(
-      token,
-      `contents/${filePath}?ref=${BRANCH}`
-    );
+    const data = await api<{ sha: string }>(`contents/${filePath}?ref=${BRANCH}`, token);
     return data.sha;
   } catch {
     return null;
@@ -129,7 +146,7 @@ export async function putFile(
   message: string,
   sha?: string | null
 ): Promise<void> {
-  await authedApi(token, `contents/${filePath}`, {
+  await api(`contents/${filePath}`, token, {
     method: 'PUT',
     body: JSON.stringify({
       message,
@@ -146,8 +163,30 @@ export async function deleteFile(
   message: string,
   sha: string
 ): Promise<void> {
-  await authedApi(token, `contents/${filePath}`, {
+  await api(`contents/${filePath}`, token, {
     method: 'DELETE',
     body: JSON.stringify({ message, sha, branch: BRANCH }),
+  });
+}
+
+/**
+ * Uploads a binary asset (an image) as one commit. `base64Content` should
+ * be the raw base64 payload with no "data:...;base64," prefix.
+ */
+export async function putBinaryFile(
+  token: string,
+  filePath: string,
+  base64Content: string,
+  message: string,
+  sha?: string | null
+): Promise<void> {
+  await api(`contents/${filePath}`, token, {
+    method: 'PUT',
+    body: JSON.stringify({
+      message,
+      content: base64Content,
+      branch: BRANCH,
+      ...(sha ? { sha } : {}),
+    }),
   });
 }

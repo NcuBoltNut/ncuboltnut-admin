@@ -2,7 +2,9 @@
 import { ref, onMounted } from 'vue';
 import { listDir, fetchRaw } from '../lib/github';
 import { parseObjectArray } from '../lib/tsDataParser';
+import { useAuthStore } from '../stores/auth';
 
+const auth = useAuthStore();
 const newsCount = ref<number | null>(null);
 const activitiesCount = ref<number | null>(null);
 const membersCount = ref<number | null>(null);
@@ -13,11 +15,11 @@ const loadError = ref('');
 onMounted(async () => {
   try {
     const [news, activities, membersRaw, sponsorsRaw, historyRaw] = await Promise.all([
-      listDir('src/content/news'),
-      listDir('src/content/activities'),
-      fetchRaw('src/data/members.ts'),
-      fetchRaw('src/data/sponsors.ts'),
-      fetchRaw('src/data/history.ts'),
+      listDir('src/content/news', auth.token ?? undefined),
+      listDir('src/content/activities', auth.token ?? undefined),
+      fetchRaw('src/data/members.ts', auth.token ?? undefined),
+      fetchRaw('src/data/sponsors.ts', auth.token ?? undefined),
+      fetchRaw('src/data/history.ts', auth.token ?? undefined),
     ]);
     newsCount.value = news.filter((e) => e.name.endsWith('.md')).length;
     activitiesCount.value = activities.filter((e) => e.name.endsWith('.md')).length;

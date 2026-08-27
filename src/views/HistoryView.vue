@@ -11,7 +11,7 @@ const loadError = ref('');
 
 onMounted(async () => {
   try {
-    const raw = await fetchRaw('src/data/history.ts');
+    const raw = await fetchRaw('src/data/history.ts', auth.token ?? undefined);
     items.value = parseObjectArray(raw)
       .map((r, i): DataRecord & { __index: number } => ({ ...r, __index: i }))
       .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));

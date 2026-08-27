@@ -39,7 +39,7 @@ onMounted(async () => {
   if (isNew) {
     // Default order = current max + 1, so new items sort last unless edited.
     try {
-      const entries = await listDir(dir);
+      const entries = await listDir(dir, auth.token ?? undefined);
       order.value = entries.filter((e) => e.name.endsWith('.md')).length + 1;
     } catch {
       order.value = 1;
@@ -50,7 +50,7 @@ onMounted(async () => {
 
   try {
     const path = `${dir}/${fileName.value}`;
-    const raw = await fetchRaw(path);
+    const raw = await fetchRaw(path, auth.token ?? undefined);
     const { data } = parseFrontmatter(raw);
     title.value = String(data.title ?? '');
     date.value = String(data.date ?? '').slice(0, 10);
