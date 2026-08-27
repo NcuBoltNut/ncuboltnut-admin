@@ -2,8 +2,9 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { fetchRaw, getFileSha, putFile, deleteFile, listDir } from '../lib/github';
-import { parseFrontmatter } from '../lib/frontmatter';
+import { parseFrontmatter, quoteYamlString } from '../lib/frontmatter';
 import { useAuthStore } from '../stores/auth';
+import ImageUploadField from '../components/ImageUploadField.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -83,21 +84,21 @@ onMounted(async () => {
 
 function buildFrontmatter(): string {
   const lines = [
-    `title: "${title.value.replace(/"/g, '\\"')}"`,
-    `dateLabel: "${dateLabel.value.replace(/"/g, '\\"')}"`,
-    `photo: "${photo.value}"`,
-    `summary: "${summary.value.replace(/"/g, '\\"')}"`,
+    `title: ${quoteYamlString(title.value)}`,
+    `dateLabel: ${quoteYamlString(dateLabel.value)}`,
+    `photo: ${quoteYamlString(photo.value)}`,
+    `summary: ${quoteYamlString(summary.value)}`,
   ];
   const stats = parseStats(statsText.value);
   if (stats.length) {
     lines.push('stats:');
     for (const s of stats) {
-      lines.push(`  - num: "${s.num}"`);
-      lines.push(`    label: "${s.label.replace(/"/g, '\\"')}"`);
+      lines.push(`  - num: ${quoteYamlString(s.num)}`);
+      lines.push(`    label: ${quoteYamlString(s.label)}`);
     }
   }
-  if (linkText.value) lines.push(`linkText: "${linkText.value.replace(/"/g, '\\"')}"`);
-  if (linkHref.value) lines.push(`linkHref: "${linkHref.value}"`);
+  if (linkText.value) lines.push(`linkText: ${quoteYamlString(linkText.value)}`);
+  if (linkHref.value) lines.push(`linkHref: ${quoteYamlString(linkHref.value)}`);
   lines.push(`order: ${order.value}`);
   return `---\n${lines.join('\n')}\n---\n`;
 }
@@ -162,9 +163,10 @@ async function remove() {
         ><span>日期標籤（例如 2026.03 · Tainan · NCKU）</span
         ><input v-model="dateLabel" required
       /></label>
-      <label class="field"
-        ><span>照片路徑（例如 /photos/act-xxx.webp）</span><input v-model="photo" required
-      /></label>
+      <label class="field">
+        <span>照片</span>
+        <ImageUploadField v-model="photo" />
+      </label>
       <label class="field"
         ><span>內容摘要（可用簡單 HTML）</span
         ><textarea v-model="summary" rows="4" required></textarea

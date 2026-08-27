@@ -3,7 +3,7 @@ import type { FieldOrder } from './tsDataFile';
 export interface FieldDef extends FieldOrder {
   label: string;
   help?: string;
-  inputType?: 'text' | 'textarea' | 'checkbox' | 'number';
+  inputType?: 'text' | 'textarea' | 'checkbox' | 'number' | 'image';
 }
 
 export interface DataTypeSchema {
@@ -40,7 +40,7 @@ export const dataSchemas: Record<string, DataTypeSchema> = {
       { key: 'role', type: 'string', label: '職位' },
       { key: 'isLeader', type: 'boolean', label: '是隊長', inputType: 'checkbox' },
       { key: 'roleTag', type: 'boolean', label: '職位以標籤樣式顯示', inputType: 'checkbox' },
-      { key: 'photo', type: 'string', label: '照片路徑', help: '例如 /photos/member-xxx.jpg' },
+      { key: 'photo', type: 'string', label: '照片', inputType: 'image' },
       { key: 'order', type: 'number', label: '排序（同屆內）', inputType: 'number' },
     ],
   },
@@ -71,7 +71,7 @@ export const dataSchemas: Record<string, DataTypeSchema> = {
       { key: 'title', type: 'string', label: '職稱' },
       { key: 'bio', type: 'string', label: '簡介', inputType: 'textarea' },
       { key: 'email', type: 'string', label: 'Email' },
-      { key: 'photo', type: 'string', label: '照片路徑' },
+      { key: 'photo', type: 'string', label: '照片', inputType: 'image' },
       { key: 'order', type: 'number', label: '排序', inputType: 'number' },
     ],
   },
@@ -86,7 +86,7 @@ export const dataSchemas: Record<string, DataTypeSchema> = {
       { key: 'id', type: 'string', label: 'ID' },
       { key: 'name', type: 'string', label: '名稱（中文）' },
       { key: 'nameEn', type: 'string', label: '名稱（英文）' },
-      { key: 'logo', type: 'string', label: 'Logo 路徑', help: '例如 /sponsor-xxx.webp' },
+      { key: 'logo', type: 'string', label: 'Logo', inputType: 'image' },
       { key: 'blurb', type: 'string', label: '簡介', inputType: 'textarea' },
       { key: 'order', type: 'number', label: '排序', inputType: 'number' },
     ],

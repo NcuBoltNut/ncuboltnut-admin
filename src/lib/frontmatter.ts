@@ -52,8 +52,25 @@ export function stringifyFrontmatter(data: Record<string, unknown>): string {
 function stringifyScalar(value: unknown): string {
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   if (value instanceof Date) return value.toISOString().slice(0, 10);
-  const str = String(value ?? '');
-  const escaped = str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return quoteYamlString(String(value ?? ''));
+}
+
+/**
+ * Double-quotes a string for a single line of this parser's frontmatter
+ * (or a YAML list item). Exported so every call site building frontmatter
+ * by hand — activities' extra fields included — goes through the same
+ * escaping instead of re-deriving it.
+ *
+ * The parser above is line-based: a value containing a raw newline (e.g.
+ * a stray Enter at the end of a textarea) produces a second physical line
+ * it can't recognize as a continuation, corrupting the field on the next
+ * read (this exact bug shipped once already). These fields are meant to
+ * be one line of text, so embedded newlines/carriage returns are
+ * collapsed rather than round-tripped.
+ */
+export function quoteYamlString(value: string): string {
+  const singleLine = value.replace(/\r\n|\r|\n/g, ' ').trim();
+  const escaped = singleLine.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   return `"${escaped}"`;
 }
 

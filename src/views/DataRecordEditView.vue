@@ -3,8 +3,10 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { fetchRaw, getFileSha, putFile } from '../lib/github';
 import { loadDataFile, serializeDataFile } from '../lib/tsDataFile';
+import type { DataRecord } from '../lib/tsDataParser';
 import { dataSchemas } from '../lib/dataSchemas';
 import { useAuthStore } from '../stores/auth';
+import ImageUploadField from '../components/ImageUploadField.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -12,8 +14,21 @@ const auth = useAuthStore();
 
 const typeKey = String(route.params.type);
 const schema = dataSchemas[typeKey];
-const indexParam = route.params.index === undefined ? null : Number(route.params.index);
-const isNew = indexParam === null;
+// Records with a real `id` field are looked up by that id, which stays
+// correct no matter how the file's records get reordered (drag-to-reorder
+// rewrites the whole file, changing every array position). `history` has
+// no id field at all, so it's the one type still addressed by raw array
+// index — meaning its edit links only stay valid as long as the list
+// view keeps records in file order rather than an independently sorted
+// display order.
+const usesIndex = schema.idField === 'order';
+const keyParam = route.params.key === undefined ? null : String(route.params.key);
+const isNew = keyParam === null;
+
+function findRecordIndex(records: DataRecord[]): number {
+  if (usesIndex) return Number(keyParam);
+  return records.findIndex((r) => String(r[schema.idField]) === keyParam);
+}
 
 // Loosely typed on purpose: this form's shape is driven entirely by
 // schema.fields at runtime (different fields per content type), so a
@@ -39,7 +54,7 @@ onMounted(async () => {
     } else {
       const raw = await fetchRaw(schema.path, auth.token ?? undefined);
       const { records } = loadDataFile(raw);
-      const record = records[indexParam!];
+      const record = records[findRecordIndex(records)];
       if (!record) throw new Error('找不到這筆資料');
       form.value = { ...record };
     }
@@ -61,7 +76,9 @@ async function save() {
     if (isNew) {
       next.push(form.value);
     } else {
-      next[indexParam!] = form.value;
+      const idx = findRecordIndex(records);
+      if (idx === -1) throw new Error('找不到這筆資料，可能已被刪除或修改');
+      next[idx] = form.value;
     }
     const content = serializeDataFile(header, next, schema.fields);
     const sha = await getFileSha(auth.token, schema.path);
@@ -90,7 +107,8 @@ async function remove() {
   try {
     const raw = await fetchRaw(schema.path, auth.token ?? undefined);
     const { header, records } = loadDataFile(raw);
-    const next = records.filter((_, i) => i !== indexParam);
+    const idx = findRecordIndex(records);
+    const next = records.filter((_, i) => i !== idx);
     const content = serializeDataFile(header, next, schema.fields);
     const sha = await getFileSha(auth.token, schema.path);
     await putFile(
@@ -120,8 +138,12 @@ async function remove() {
     <form v-else class="card" @submit.prevent="save">
       <label v-for="f in schema.fields" :key="f.key" class="field">
         <span>{{ f.label }}<template v-if="f.help"> — {{ f.help }}</template></span>
+        <ImageUploadField
+          v-if="f.inputType === 'image'"
+          v-model="form[f.key]"
+        />
         <input
-          v-if="f.inputType === 'checkbox'"
+          v-else-if="f.inputType === 'checkbox'"
           v-model="form[f.key]"
           type="checkbox"
           style="width: auto"

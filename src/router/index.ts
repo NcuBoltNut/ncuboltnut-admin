@@ -41,7 +41,7 @@ const router = createRouter({
       component: () => import('../views/DataRecordEditView.vue'),
     },
     {
-      path: '/:type(members|generations|advisors|sponsors|history)/edit/:index',
+      path: '/:type(members|generations|advisors|sponsors|history)/edit/:key',
       name: 'data-edit',
       component: () => import('../views/DataRecordEditView.vue'),
     },
