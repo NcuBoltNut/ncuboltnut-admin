@@ -2,9 +2,10 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { fetchRaw, getFileSha, putFile, deleteFile } from '../lib/github';
-import { parseFrontmatter, stringifyFrontmatter } from '../lib/frontmatter';
+import { parseFrontmatter, quoteYamlString } from '../lib/frontmatter';
 import { nextTopOrder } from '../lib/ordering';
 import { useAuthStore } from '../stores/auth';
+import InternalLinkField from '../components/InternalLinkField.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -17,6 +18,8 @@ const dir = 'src/content/news';
 const title = ref('');
 const date = ref('');
 const summary = ref('');
+const linkText = ref('');
+const linkHref = ref('');
 const order = ref(1);
 
 const saving = ref(false);
@@ -57,6 +60,8 @@ onMounted(async () => {
     title.value = String(data.title ?? '');
     date.value = String(data.date ?? '').slice(0, 10);
     summary.value = String(data.summary ?? '');
+    linkText.value = String(data.linkText ?? '');
+    linkHref.value = String(data.linkHref ?? '');
     order.value = Number(data.order ?? 1);
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : String(e);
@@ -65,6 +70,18 @@ onMounted(async () => {
   }
 });
 
+function buildFrontmatter(): string {
+  const lines = [
+    `title: ${quoteYamlString(title.value)}`,
+    `date: ${date.value}`,
+    `summary: ${quoteYamlString(summary.value)}`,
+  ];
+  if (linkText.value) lines.push(`linkText: ${quoteYamlString(linkText.value)}`);
+  if (linkHref.value) lines.push(`linkHref: ${quoteYamlString(linkHref.value)}`);
+  lines.push(`order: ${order.value}`);
+  return `---\n${lines.join('\n')}\n---\n`;
+}
+
 async function save() {
   if (!auth.token) return;
   saving.value = true;
@@ -72,12 +89,7 @@ async function save() {
   try {
     const targetFile = isNew ? `${date.value}-${slugify(title.value)}.md` : fileName.value;
     const path = `${dir}/${targetFile}`;
-    const frontmatter = stringifyFrontmatter({
-      title: title.value,
-      date: new Date(date.value),
-      summary: summary.value,
-      order: order.value,
-    });
+    const frontmatter = buildFrontmatter();
     // Always re-check the SHA right before writing rather than trusting
     // whatever was fetched when the page loaded — that value goes stale if
     // the form sits open a while, or if a save is retried after a prior
@@ -139,6 +151,11 @@ async function remove() {
       <label class="field">
         <span>內容摘要（可用簡單 HTML，例如 &lt;strong&gt;）</span>
         <textarea v-model="summary" rows="4" required></textarea>
+      </label>
+      <label class="field"><span>延伸連結文字（選填）</span><input v-model="linkText" placeholder="查看更多 →" /></label>
+      <label class="field">
+        <span>延伸連結目的地（選填）</span>
+        <InternalLinkField v-model="linkHref" />
       </label>
       <label class="field">
         <span>排序（數字越小越前面）</span>

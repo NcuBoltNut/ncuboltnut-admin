@@ -6,6 +6,7 @@ import { parseFrontmatter, quoteYamlString } from '../lib/frontmatter';
 import { nextTopOrder } from '../lib/ordering';
 import { useAuthStore } from '../stores/auth';
 import ImageUploadField from '../components/ImageUploadField.vue';
+import InternalLinkField from '../components/InternalLinkField.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -178,9 +179,10 @@ async function remove() {
         <textarea v-model="statsText" rows="3" placeholder="95%|出席率&#10;4.7/5|滿意度"></textarea>
       </label>
       <label class="field"><span>延伸連結文字（選填）</span><input v-model="linkText" /></label>
-      <label class="field"
-        ><span>延伸連結網址（選填，例如 /achievements）</span><input v-model="linkHref"
-      /></label>
+      <label class="field">
+        <span>延伸連結目的地（選填）</span>
+        <InternalLinkField v-model="linkHref" />
+      </label>
       <label class="field"
         ><span>排序（數字越小越前面）</span
         ><input v-model.number="order" type="number" min="1" required
