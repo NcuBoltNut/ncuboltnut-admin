@@ -31,9 +31,17 @@ function authHeaders(token?: string): Record<string, string> {
 }
 
 async function api<T>(path: string, token?: string, init?: Omit<RequestInit, 'headers'>): Promise<T> {
+  // GitHub's API sends its own Cache-Control/ETag headers on GET responses,
+  // and fetch()'s default cache mode honours them — so without this, the
+  // browser can silently reuse a cached response for the same URL (e.g.
+  // right after a save, reloading the page re-requests the exact same
+  // contents/{path}?ref=main URL and gets served the pre-save copy from
+  // the browser's own HTTP cache, no network round-trip at all). Force
+  // every call through this client to actually hit the network.
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/${path}`, {
     ...init,
     headers: authHeaders(token),
+    cache: 'no-store',
   });
   if (!res.ok) {
     if (!token && (res.status === 403 || res.status === 429)) {
