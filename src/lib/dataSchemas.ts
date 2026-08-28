@@ -102,10 +102,11 @@ export const dataSchemas: Record<string, DataTypeSchema> = {
     key: 'history',
     label: '隊史',
     path: 'src/data/history.ts',
-    idField: 'order',
+    idField: 'id',
     titleField: 'title',
     listRoute: '/history',
     fields: [
+      { key: 'id', type: 'string', label: 'ID', help: '唯一識別碼，用於首頁隊史深連結，建立後不要更改' },
       { key: 'date', type: 'string', label: '日期', help: '例如 2026.03.28' },
       { key: 'title', type: 'string', label: '標題' },
       { key: 'body', type: 'string', label: '內容', inputType: 'textarea' },

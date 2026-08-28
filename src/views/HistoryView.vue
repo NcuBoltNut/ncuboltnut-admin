@@ -25,10 +25,6 @@ async function load() {
     const raw = await fetchRaw(PATH, auth.token ?? undefined);
     const loaded = loadDataFile(raw);
     header = loaded.header;
-    // Sorted by order, which — as long as every edit goes through this
-    // page's reorder or the edit form — always matches file position, so
-    // index-based edit links (history has no id field to key off) stay
-    // correct.
     items.value = [...loaded.records].sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
   } catch (e) {
     loadError.value = e instanceof Error ? e.message : String(e);
@@ -76,12 +72,12 @@ async function onReorder() {
 
   <draggable
     v-model="items"
-    item-key="title"
+    item-key="id"
     :disabled="!auth.token || saving"
     handle=".drag-handle"
     @end="onReorder"
   >
-    <template #item="{ element: item, index }">
+    <template #item="{ element: item }">
       <div class="card">
         <div class="card-meta">
           <span v-if="auth.token" class="drag-handle" title="拖曳調整順序">⠿</span>
@@ -90,7 +86,7 @@ async function onReorder() {
         </div>
         <p class="card-title">{{ item.title }}</p>
         <p>{{ item.body }}</p>
-        <RouterLink v-if="auth.token" :to="`/history/edit/${index}`" class="edit-link"
+        <RouterLink v-if="auth.token" :to="`/history/edit/${item.id}`" class="edit-link"
           >編輯 →</RouterLink
         >
       </div>

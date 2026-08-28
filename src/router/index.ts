@@ -32,6 +32,21 @@ const router = createRouter({
       name: 'activities-edit',
       component: () => import('../views/ActivitiesEditView.vue'),
     },
+    {
+      path: '/achievements',
+      name: 'achievements',
+      component: () => import('../views/AchievementsView.vue'),
+    },
+    {
+      path: '/achievements/new',
+      name: 'achievements-new',
+      component: () => import('../views/AchievementsEditView.vue'),
+    },
+    {
+      path: '/achievements/:file',
+      name: 'achievements-edit',
+      component: () => import('../views/AchievementsEditView.vue'),
+    },
     { path: '/members', name: 'members', component: () => import('../views/MembersView.vue') },
     { path: '/sponsors', name: 'sponsors', component: () => import('../views/SponsorsView.vue') },
     { path: '/history', name: 'history', component: () => import('../views/HistoryView.vue') },

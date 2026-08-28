@@ -16,11 +16,7 @@ const typeKey = String(route.params.type);
 const schema = dataSchemas[typeKey];
 // Records with a real `id` field are looked up by that id, which stays
 // correct no matter how the file's records get reordered (drag-to-reorder
-// rewrites the whole file, changing every array position). `history` has
-// no id field at all, so it's the one type still addressed by raw array
-// index — meaning its edit links only stay valid as long as the list
-// view keeps records in file order rather than an independently sorted
-// display order.
+// rewrites the whole file, changing every array position).
 const usesIndex = schema.idField === 'order';
 const keyParam = route.params.key === undefined ? null : String(route.params.key);
 const isNew = keyParam === null;

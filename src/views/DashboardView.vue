@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth';
 const auth = useAuthStore();
 const newsCount = ref<number | null>(null);
 const activitiesCount = ref<number | null>(null);
+const achievementsCount = ref<number | null>(null);
 const membersCount = ref<number | null>(null);
 const sponsorsCount = ref<number | null>(null);
 const historyCount = ref<number | null>(null);
@@ -14,15 +15,17 @@ const loadError = ref('');
 
 onMounted(async () => {
   try {
-    const [news, activities, membersRaw, sponsorsRaw, historyRaw] = await Promise.all([
+    const [news, activities, achievements, membersRaw, sponsorsRaw, historyRaw] = await Promise.all([
       listDir('src/content/news', auth.token ?? undefined),
       listDir('src/content/activities', auth.token ?? undefined),
+      listDir('src/content/achievements', auth.token ?? undefined),
       fetchRaw('src/data/members.ts', auth.token ?? undefined),
       fetchRaw('src/data/sponsors.ts', auth.token ?? undefined),
       fetchRaw('src/data/history.ts', auth.token ?? undefined),
     ]);
     newsCount.value = news.filter((e) => e.name.endsWith('.md')).length;
     activitiesCount.value = activities.filter((e) => e.name.endsWith('.md')).length;
+    achievementsCount.value = achievements.filter((e) => e.name.endsWith('.md')).length;
     // parseObjectArray only counts object literals with quoted/number/boolean
     // values, so it correctly skips the `interface X { id: string; ... }`
     // type declarations at the top of each file (a plain regex on `{ id:`
@@ -56,6 +59,10 @@ onMounted(async () => {
     <RouterLink to="/activities" class="stat-card">
       <div class="stat-num">{{ activitiesCount ?? '…' }}</div>
       <div class="stat-label">個活動成果</div>
+    </RouterLink>
+    <RouterLink to="/achievements" class="stat-card">
+      <div class="stat-num">{{ achievementsCount ?? '…' }}</div>
+      <div class="stat-label">筆競賽成就</div>
     </RouterLink>
     <RouterLink to="/members" class="stat-card">
       <div class="stat-num">{{ membersCount ?? '…' }}</div>
