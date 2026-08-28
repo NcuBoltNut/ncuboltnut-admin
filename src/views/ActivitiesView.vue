@@ -11,7 +11,7 @@ const DIR = 'src/content/activities';
 interface ActivityItem {
   title: string;
   dateLabel: string;
-  photo: string;
+  photos: string[];
   summary: string;
   stats: { num: string; label: string }[];
   linkText: string;
@@ -42,10 +42,15 @@ async function load() {
         const stats = Array.isArray(data.stats)
           ? (data.stats as { num: string; label: string }[])
           : [];
+        const photos = Array.isArray(data.photos)
+          ? (data.photos as string[])
+          : data.photo
+            ? [String(data.photo)]
+            : [];
         return {
           title: String(data.title ?? entry.name),
           dateLabel: String(data.dateLabel ?? ''),
-          photo: String(data.photo ?? ''),
+          photos,
           summary: String(data.summary ?? ''),
           stats,
           linkText: String(data.linkText ?? ''),
@@ -73,7 +78,8 @@ function buildFrontmatter(item: ActivityItem, order: number): string {
   const lines = [
     `title: ${quoteYamlString(item.title)}`,
     `dateLabel: ${quoteYamlString(item.dateLabel)}`,
-    `photo: ${quoteYamlString(item.photo)}`,
+    'photos:',
+    ...item.photos.map((p) => `  - ${quoteYamlString(p)}`),
     `summary: ${quoteYamlString(item.summary)}`,
   ];
   if (item.stats.length) {
@@ -144,11 +150,12 @@ async function onReorder() {
         <div class="member-row">
           <span v-if="auth.token" class="drag-handle" title="拖曳調整順序">⠿</span>
           <img
-            v-if="item.photo"
-            :src="RAW_BASE + item.photo"
+            v-if="item.photos[0]"
+            :src="RAW_BASE + item.photos[0]"
             :alt="item.title"
             style="width: 96px; height: 64px; object-fit: cover; border-radius: 4px"
           />
+          <span v-if="item.photos.length > 1" class="photo-count">+{{ item.photos.length - 1 }}</span>
           <div>
             <div class="card-meta">
               <span>{{ item.dateLabel }}</span>
@@ -206,5 +213,10 @@ async function onReorder() {
   cursor: grab;
   color: var(--muted);
   font-size: 16px;
+}
+.photo-count {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
 }
 </style>

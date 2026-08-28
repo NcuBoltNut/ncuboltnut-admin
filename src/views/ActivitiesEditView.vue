@@ -5,7 +5,7 @@ import { fetchRaw, getFileSha, putFile, deleteFile } from '../lib/github';
 import { parseFrontmatter, quoteYamlString } from '../lib/frontmatter';
 import { nextTopOrder } from '../lib/ordering';
 import { useAuthStore } from '../stores/auth';
-import ImageUploadField from '../components/ImageUploadField.vue';
+import ImageGalleryField from '../components/ImageGalleryField.vue';
 import InternalLinkField from '../components/InternalLinkField.vue';
 
 const route = useRoute();
@@ -18,7 +18,7 @@ const dir = 'src/content/activities';
 
 const title = ref('');
 const dateLabel = ref('');
-const photo = ref('');
+const photos = ref<string[]>([]);
 const summary = ref('');
 const statsText = ref(''); // one "num|label" per line
 const linkText = ref('');
@@ -71,7 +71,13 @@ onMounted(async () => {
     const { data } = parseFrontmatter(raw);
     title.value = String(data.title ?? '');
     dateLabel.value = String(data.dateLabel ?? '');
-    photo.value = String(data.photo ?? '');
+    // Older items may still carry the single `photo` field from before
+    // the gallery/carousel upgrade — treat it as a one-photo gallery.
+    photos.value = Array.isArray(data.photos)
+      ? (data.photos as string[])
+      : data.photo
+        ? [String(data.photo)]
+        : [];
     summary.value = String(data.summary ?? '');
     linkText.value = String(data.linkText ?? '');
     linkHref.value = String(data.linkHref ?? '');
@@ -89,7 +95,8 @@ function buildFrontmatter(): string {
   const lines = [
     `title: ${quoteYamlString(title.value)}`,
     `dateLabel: ${quoteYamlString(dateLabel.value)}`,
-    `photo: ${quoteYamlString(photo.value)}`,
+    'photos:',
+    ...photos.value.map((p) => `  - ${quoteYamlString(p)}`),
     `summary: ${quoteYamlString(summary.value)}`,
   ];
   const stats = parseStats(statsText.value);
@@ -108,6 +115,10 @@ function buildFrontmatter(): string {
 
 async function save() {
   if (!auth.token) return;
+  if (photos.value.length === 0) {
+    errorMsg.value = '請至少上傳一張照片';
+    return;
+  }
   saving.value = true;
   errorMsg.value = '';
   try {
@@ -167,8 +178,8 @@ async function remove() {
         ><input v-model="dateLabel" required
       /></label>
       <label class="field">
-        <span>照片</span>
-        <ImageUploadField v-model="photo" />
+        <span>照片（可上傳多張，拖曳可調整順序，會以輪播呈現）</span>
+        <ImageGalleryField v-model="photos" />
       </label>
       <label class="field"
         ><span>內容摘要（可用簡單 HTML）</span

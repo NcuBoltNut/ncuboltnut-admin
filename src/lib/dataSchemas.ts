@@ -55,6 +55,13 @@ export const dataSchemas: Record<string, DataTypeSchema> = {
       { key: 'id', type: 'string', label: 'ID', help: '例如 gen-01，成員資料要引用這個值' },
       { key: 'label', type: 'string', label: '屆別名稱', help: '例如 第一屆' },
       { key: 'year', type: 'string', label: '年級', help: '例如 大四' },
+      {
+        key: 'isAlumni',
+        type: 'boolean',
+        label: '已畢業',
+        help: '打勾後，這屆成員會從主頁移到「歷屆學長姐」下拉選單，選擇後才會展開',
+        inputType: 'checkbox',
+      },
       { key: 'order', type: 'number', label: '排序', inputType: 'number' },
     ],
   },
