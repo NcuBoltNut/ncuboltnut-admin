@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { fetchRaw, getFileSha, putFile, deleteFile, listDir } from '../lib/github';
+import { fetchRaw, getFileSha, putFile, deleteFile } from '../lib/github';
 import { parseFrontmatter, quoteYamlString } from '../lib/frontmatter';
+import { nextTopOrder } from '../lib/ordering';
 import { useAuthStore } from '../stores/auth';
 import ImageUploadField from '../components/ImageUploadField.vue';
 
@@ -53,9 +54,10 @@ function parseStats(text: string): { num: string; label: string }[] {
 
 onMounted(async () => {
   if (isNew) {
+    // New items sort at the top — see NewsEditView's comment on
+    // nextTopOrder for why.
     try {
-      const entries = await listDir(dir, auth.token ?? undefined);
-      order.value = entries.filter((e) => e.name.endsWith('.md')).length + 1;
+      order.value = await nextTopOrder(dir, auth.token ?? undefined);
     } catch {
       order.value = 1;
     }

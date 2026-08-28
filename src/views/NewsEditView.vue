@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { fetchRaw, getFileSha, putFile, deleteFile, listDir } from '../lib/github';
+import { fetchRaw, getFileSha, putFile, deleteFile } from '../lib/github';
 import { parseFrontmatter, stringifyFrontmatter } from '../lib/frontmatter';
+import { nextTopOrder } from '../lib/ordering';
 import { useAuthStore } from '../stores/auth';
 
 const route = useRoute();
@@ -37,10 +38,11 @@ function slugify(text: string): string {
 
 onMounted(async () => {
   if (isNew) {
-    // Default order = current max + 1, so new items sort last unless edited.
+    // New items sort at the top (order ascending = newest first, matching
+    // how the list is meant to read top-to-bottom) rather than at the
+    // bottom — no existing file needs to change for this to work.
     try {
-      const entries = await listDir(dir, auth.token ?? undefined);
-      order.value = entries.filter((e) => e.name.endsWith('.md')).length + 1;
+      order.value = await nextTopOrder(dir, auth.token ?? undefined);
     } catch {
       order.value = 1;
     }
