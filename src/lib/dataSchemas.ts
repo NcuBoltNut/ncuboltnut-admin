@@ -94,6 +94,12 @@ export const dataSchemas: Record<string, DataTypeSchema> = {
       { key: 'name', type: 'string', label: '名稱（中文）' },
       { key: 'nameEn', type: 'string', label: '名稱（英文）' },
       { key: 'logo', type: 'string', label: 'Logo', inputType: 'image' },
+      {
+        key: 'website',
+        type: 'string',
+        label: '官方網站',
+        help: '完整網址，例如 https://www.example.com/。填寫後，網站上的 logo 會連到這裡',
+      },
       { key: 'blurb', type: 'string', label: '簡介', inputType: 'textarea' },
       { key: 'order', type: 'number', label: '排序', inputType: 'number' },
     ],
